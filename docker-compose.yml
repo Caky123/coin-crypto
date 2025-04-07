@@ -1,0 +1,71 @@
+services:
+  # PostgreSQL service
+  db:
+    image: postgres:17
+    container_name: postgres-db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: mydatabase
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./fastapi-app/app/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - mynetwork
+  
+  redis:
+    image: redis:latest  # Používáme oficiální Redis image
+    container_name: redis
+    ports:
+      - "6379:6379"  # Exponujeme port Redis pro komunikaci s aplikací
+    networks:
+      - mynetwork  # Používáme síť, kterou sdílí všechny služby
+  
+  fastapi-app:
+    build:
+      context: ./fastapi-app
+    container_name: fastapi-container
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./fastapi-app:/app
+    env_file:
+      - ./fastapi-app/dev-scripts/env-test.env
+    restart: always
+    depends_on:
+      - db
+      - redis
+    networks:
+      - mynetwork
+  
+  flask-app:
+    build:
+      context: ./flask-app  # Cesta k Flask aplikaci
+    container_name: flask-app
+    ports:
+      - "5001:5000"  # Otevření portu pro Flask aplikaci
+    depends_on:
+      - fastapi-app
+    environment:
+      - FLASK_ENV=development
+    command: flask run --host=0.0.0.0 --port=5000
+    networks:
+      - mynetwork
+  
+  cron:
+    build: ./cron
+    container_name: cron-job
+    volumes:
+      - ./cron:/app  # Zajistí, že skripty budou dostupné v kontejneru
+    env_file:
+      - ./cron/env-test.env
+    depends_on:
+      - db
+    networks:
+      - mynetwork
+    entrypoint: ["sh", "-c", "sleep 20 && while true; do python3 /cron/price_updater.py; sleep 600; done"]
+
+networks:
+  mynetwork:
+    driver: bridge

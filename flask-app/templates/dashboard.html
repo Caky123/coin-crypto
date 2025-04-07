@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        .container {
+            margin-top: 20px;
+        }
+        .container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        .table-container {
+            width: 48%;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .navbar {
+            display: flex;
+            justify-content: space-around;
+            background-color: #333;
+            padding: 10px;
+        }
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+        }
+        .navbar a:hover {
+            background-color: #575757;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="navbar">
+        <a href="{{ url_for('dashboard') }}">Dashboard</a>
+        <a href="{{ url_for('search') }}">Search</a>
+        <button id="logout-button">Logout</button>
+    </div>
+
+    <div class="container">
+        <!-- Dashboard -->
+        {% if request.path == '/dashboard' %}
+        <div class="table-container">
+            <h2>Your Portfolio</h2>
+            <table border="1">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Symbol</th>
+                        <th>Price [USD]</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                        <tr>
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.symbol }}</td>
+                            <td>{{ item.price }}</td>
+                            <td>
+                                <button class="delete-coin" data-coin-id="{{ item.id_text }}">Delete</button>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="3">No items available</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <!-- Search -->
+        {% if request.path == '/search' %}
+        <div class="table-container" id="search-results-container">
+            <h2>Search Results</h2>
+            <form method="POST" action="{{ url_for('search') }}" id="search-form">
+                <input type="text" name="symbol" id="symbol" placeholder="Enter symbol to search" required>
+                <button type="submit">Search</button>
+            </form>
+
+            <table border="1">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Symbol</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if search_results %}
+                        {% for item in search_results %}
+                            <tr>
+                                <td>{{ item.name }}</td>
+                                <td>{{ item.symbol }}</td>
+                                <td>
+                                    <button class="add-coin" data-coin-id="{{ item.id_text }}">Add</button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="4">No results found</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        // Add crypto by AJAX request
+        $(document).on("click", ".add-coin", function() {
+            var coin_id = $(this).data("coin-id");
+            var access_token = getCookie("access_token");
+            
+            $.ajax({
+                url: "/add_coin/" + coin_id,
+                method: "POST",
+                headers: {
+                    "Authorization": "Bearer " + access_token
+                },
+                success: function(response) {
+                    window.location.href = "/dashboard";
+                },
+                error: function(xhr, status, error) {
+                    if (xhr.status === 401 || xhr.status === 403) {
+                        alert("Your session has expired. Please log in again.");
+                        window.location.href = "/login";
+                    } else {
+                        alert("Error added coin: " + xhr.responseText );
+                    }
+                }
+            });
+        });
+
+        // Remove crypto by AJAX request
+        $(document).on("click", ".delete-coin", function() {
+            var coin_id = $(this).data("coin-id");
+            var access_token = getCookie("access_token");
+            
+            if (confirm("Are you sure you want to delete this coin from your portfolio?")) {
+                $.ajax({
+                    url: "/delete_coin/" + coin_id,
+                    method: "DELETE",
+                    headers: {
+                        "Authorization": "Bearer " + access_token
+                    },
+                    success: function(response) {
+                        window.location.href = "/dashboard";
+                    },
+                    error: function(xhr, status, error) {
+                        if (xhr.status === 401 || xhr.status === 403) {
+                            alert("Your session has expired. Please log in again.");
+                            window.location.href = "/login";
+                        } else {
+                            alert("Error deleting coin: " + xhr.responseText + " / " + status );
+                        }
+                    }
+                });
+            }
+        });
+
+        function deleteCookie(name) {
+            document.cookie = name + '=; Max-Age=-1;';
+        }
+
+        function logout() {
+            window.location.href = "/logout";
+        }
+
+        $(document).on("click", "#logout-button", function() {
+            logout();
+        });
+
+        function getCookie(name) {
+            var value = "; " + document.cookie;
+            var parts = value.split("; " + name + "=");
+            if (parts.length == 2) return parts.pop().split(";").shift();
+        }
+    </script>
+
+</body>
+</html>
