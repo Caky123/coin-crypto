@@ -151,7 +151,7 @@ def delete_coin(coin_id):
     access_token = request.cookies.get("access_token")
     headers = {"Authorization": f"Bearer {access_token}"}
 
-    response = requests.delete(FASTAPI_URL + "/coin/remove/" + coin_id, headers=headers)
+    response = requests.delete(FASTAPI_URL + "/portfolio/coin/remove/" + coin_id, headers=headers)
 
     if response.status_code == 200:
         return {"message": "Coin removed successfully"}, 200
