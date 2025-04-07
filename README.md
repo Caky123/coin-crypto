@@ -17,3 +17,5 @@ Symbols are validated by the CoinGecko API. The symbols are stored in Redis for 
 Data is stored in PostgreSQL.
 
 The API of this application also allows you to update coins, but the update functionality is not yet implemented in Flask.
+
+Fast-API - localhost:8000/docs
